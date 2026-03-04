@@ -7,7 +7,6 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters, ContextTypes
 
-# Token'ı environment variable'dan al (HF Secrets'tan)
 TOKEN = os.environ.get("BOT_TOKEN", "")
 if not TOKEN:
     raise ValueError("BOT_TOKEN environment variable tanımlanmamış!")
@@ -18,7 +17,7 @@ class HealthCheck(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(b"Jarwis Online")
     def log_message(self, format, *args):
-        pass  # Log spam'i kapat
+        pass
 
 def run_port():
     try:
@@ -51,7 +50,7 @@ async def handle_msg(u: Update, c: ContextTypes.DEFAULT_TYPE):
         res = info.get('entries', [info])
         await s.delete()
 
-        for e in res[:5]:  # Max 5 sonuç
+        for e in res[:5]:
             vid = e.get('id')
             if not vid:
                 continue
@@ -73,10 +72,7 @@ async def btn(u: Update, c: ContextTypes.DEFAULT_TYPE):
     url = q.data
     await q.answer("İndiriliyor, lütfen bekleyin...")
     m = await q.message.reply_text("📥 *İndiriliyor...*", parse_mode="Markdown")
-    
-    # /tmp kullan — Docker'da yazılabilir alan
     fname = f"/tmp/{int(time.time())}.mp3"
-    
     try:
         opts_dl = {
             'format': 'bestaudio/best',
@@ -92,10 +88,8 @@ async def btn(u: Update, c: ContextTypes.DEFAULT_TYPE):
         with yt_dlp.YoutubeDL(opts_dl) as ydl:
             await loop.run_in_executor(None, lambda: ydl.download([url]))
 
-        # Dosyayı bul (uzantı değişmiş olabilir)
         actual_file = fname
         if not os.path.exists(actual_file):
-            # .mp3 uzantısıyla ara
             base = fname.replace('.mp3', '')
             for ext in ['.mp3', '.m4a', '.webm', '.opus']:
                 if os.path.exists(base + ext):
@@ -113,8 +107,31 @@ async def btn(u: Update, c: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         print(f"İndirme hatası: {e}")
         await m.edit_text(f"❌ İndirme başarısız: {str(e)[:100]}")
-        # Temizlik
         for ext in ['.mp3', '.m4a', '.webm', '.opus']:
             f = fname.replace('.mp3', ext)
             if os.path.exists(f):
                 os.remove(f)
+
+def main():
+    threading.Thread(target=run_port, daemon=True).start()
+    print("✅ Health check server başlatıldı")
+    print(f"🔑 Token kontrol: {TOKEN[:15]}...")
+
+    app = Application.builder().token(TOKEN).build()
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_msg))
+    app.add_handler(CallbackQueryHandler(btn))
+
+    print("🤖 Jarwis başlatılıyor...")
+    try:
+        app.run_polling(
+            drop_pending_updates=True,
+            timeout=30,
+            poll_interval=1.0,
+        )
+    except Exception as e:
+        print(f"❌ KRITIK HATA: {e}")
+        raise
+
+if __name__ == '__main__':
+    main()
