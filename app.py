@@ -28,13 +28,14 @@ def run_port():
 
 async def start(u: Update, c: ContextTypes.DEFAULT_TYPE):
     await u.message.reply_text(
-        "🤖 *Jarwis Çevrimiçi.*\nEfendim, emrinizdeyim.",
+        "🤖 *Jarwis Çevrimiçi.*\nEfendim, emrinizdeyim.\n\n🎵 Müzik aramak için şarkı adı yazın!",
         parse_mode="Markdown"
     )
 
 async def handle_msg(u: Update, c: ContextTypes.DEFAULT_TYPE):
     q = u.message.text
-    sq = q if q.startswith("http") else f"ytsearch5:{q}"
+    # SoundCloud'da ara
+    sq = f"scsearch5:{q}"
     s = await u.message.reply_text("🖥️ *Aranıyor...*", parse_mode="Markdown")
     try:
         loop = asyncio.get_event_loop()
@@ -51,16 +52,16 @@ async def handle_msg(u: Update, c: ContextTypes.DEFAULT_TYPE):
         await s.delete()
 
         for e in res[:5]:
-            vid = e.get('id')
-            if not vid:
+            if not e:
                 continue
-            url = f"https://www.youtube.com/watch?v={vid}"
+            url = e.get('webpage_url', '')
             title = e.get('title', 'Bilinmeyen')
             duration = e.get('duration', 0)
             dur_str = f"{duration//60}:{duration%60:02d}" if duration else "?"
+            uploader = e.get('uploader', '')
             kb = [[InlineKeyboardButton("📥 İndir (MP3)", callback_data=url)]]
             await u.message.reply_text(
-                f"🎧 *{title}*\n⏱ {dur_str}",
+                f"🎧 *{title}*\n👤 {uploader}\n⏱ {dur_str}",
                 reply_markup=InlineKeyboardMarkup(kb),
                 parse_mode="Markdown"
             )
@@ -72,11 +73,11 @@ async def btn(u: Update, c: ContextTypes.DEFAULT_TYPE):
     url = q.data
     await q.answer("İndiriliyor, lütfen bekleyin...")
     m = await q.message.reply_text("📥 *İndiriliyor...*", parse_mode="Markdown")
-    fname = f"/tmp/{int(time.time())}.mp3"
+    fname = f"/tmp/{int(time.time())}"
     try:
         opts_dl = {
             'format': 'bestaudio/best',
-            'outtmpl': fname.replace('.mp3', '.%(ext)s'),
+            'outtmpl': f'{fname}.%(ext)s',
             'postprocessors': [{
                 'key': 'FFmpegExtractAudio',
                 'preferredcodec': 'mp3',
@@ -88,15 +89,13 @@ async def btn(u: Update, c: ContextTypes.DEFAULT_TYPE):
         with yt_dlp.YoutubeDL(opts_dl) as ydl:
             await loop.run_in_executor(None, lambda: ydl.download([url]))
 
-        actual_file = fname
-        if not os.path.exists(actual_file):
-            base = fname.replace('.mp3', '')
-            for ext in ['.mp3', '.m4a', '.webm', '.opus']:
-                if os.path.exists(base + ext):
-                    actual_file = base + ext
-                    break
+        actual_file = None
+        for ext in ['.mp3', '.m4a', '.webm', '.opus']:
+            if os.path.exists(fname + ext):
+                actual_file = fname + ext
+                break
 
-        if os.path.exists(actual_file):
+        if actual_file:
             with open(actual_file, 'rb') as f:
                 await c.bot.send_audio(chat_id=q.message.chat_id, audio=f)
             os.remove(actual_file)
@@ -107,15 +106,10 @@ async def btn(u: Update, c: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         print(f"İndirme hatası: {e}")
         await m.edit_text(f"❌ İndirme başarısız: {str(e)[:100]}")
-        for ext in ['.mp3', '.m4a', '.webm', '.opus']:
-            f = fname.replace('.mp3', ext)
-            if os.path.exists(f):
-                os.remove(f)
 
 def main():
     threading.Thread(target=run_port, daemon=True).start()
     print("✅ Health check server başlatıldı")
-    print(f"🔑 Token kontrol: {TOKEN[:15]}...")
 
     app = Application.builder().token(TOKEN).build()
     app.add_handler(CommandHandler("start", start))
@@ -130,7 +124,7 @@ def main():
             poll_interval=1.0,
         )
     except Exception as e:
-        print(f"❌ KRITIK HATA: {e}")
+        print(f"❌ KRİTİK HATA: {e}")
         raise
 
 if __name__ == '__main__':
