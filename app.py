@@ -34,7 +34,6 @@ async def start(u: Update, c: ContextTypes.DEFAULT_TYPE):
 
 async def handle_msg(u: Update, c: ContextTypes.DEFAULT_TYPE):
     q = u.message.text
-    # SoundCloud'da ara
     sq = f"scsearch5:{q}"
     s = await u.message.reply_text("🖥️ *Aranıyor...*", parse_mode="Markdown")
     try:
@@ -56,7 +55,7 @@ async def handle_msg(u: Update, c: ContextTypes.DEFAULT_TYPE):
                 continue
             url = e.get('webpage_url', '')
             title = e.get('title', 'Bilinmeyen')
-            duration = e.get('duration', 0)
+            duration = int(e.get('duration', 0) or 0)
             dur_str = f"{duration//60}:{duration%60:02d}" if duration else "?"
             uploader = e.get('uploader', '')
             kb = [[InlineKeyboardButton("📥 İndir (MP3)", callback_data=url)]]
