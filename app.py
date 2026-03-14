@@ -67,6 +67,36 @@ async def handle_msg(u: Update, c: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         await s.edit_text(f"❌ Hata: {str(e)}")
 
+async def get_url(u: Update, c: ContextTypes.DEFAULT_TYPE):
+    text = u.message.text.replace("/url", "").strip()
+    if not text:
+        await u.message.reply_text("Kullanim: /url sarki adi")
+        return
+    sq = f"scsearch1:{text}"
+    try:
+        loop = asyncio.get_event_loop()
+        ydl_opts = {
+            'format': 'bestaudio/best',
+            'quiet': True,
+            'noplaylist': True,
+        }
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = await loop.run_in_executor(None, lambda: ydl.extract_info(sq, download=False))
+        entries = info.get('entries', [info])
+        e = entries[0] if entries else None
+        if e:
+            stream_url = e.get('url', '')
+            title = e.get('title', '')
+            thumbnail = e.get('thumbnail', '')
+            duration = int(e.get('duration', 0) or 0)
+            await u.message.reply_text(
+                f"STREAM_URL:{stream_url}\nTITLE:{title}\nTHUMBNAIL:{thumbnail}\nDURATION:{duration}"
+            )
+        else:
+            await u.message.reply_text("ERROR:Bulunamadi")
+    except Exception as ex:
+        await u.message.reply_text(f"ERROR:{str(ex)}")
+
 async def btn(u: Update, c: ContextTypes.DEFAULT_TYPE):
     q = u.callback_query
     url = q.data
@@ -111,20 +141,4 @@ def main():
     print("✅ Health check server başlatıldı")
 
     app = Application.builder().token(TOKEN).build()
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_msg))
-    app.add_handler(CallbackQueryHandler(btn))
-
-    print("🤖 Jarwis başlatılıyor...")
-    try:
-        app.run_polling(
-            drop_pending_updates=True,
-            timeout=30,
-            poll_interval=1.0,
-        )
-    except Exception as e:
-        print(f"❌ KRİTİK HATA: {e}")
-        raise
-
-if __name__ == '__main__':
-    main()
+    app.
