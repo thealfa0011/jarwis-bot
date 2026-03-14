@@ -141,4 +141,21 @@ def main():
     print("✅ Health check server başlatıldı")
 
     app = Application.builder().token(TOKEN).build()
-    app.
+app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("url", get_url))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_msg))
+    app.add_handler(CallbackQueryHandler(btn))
+
+    print("🤖 Jarwis başlatılıyor...")
+    try:
+        app.run_polling(
+            drop_pending_updates=True,
+            timeout=30,
+            poll_interval=1.0,
+        )
+    except Exception as e:
+        print(f"❌ KRİTİK HATA: {e}")
+        raise
+
+if __name__ == '__main__':
+    main()
