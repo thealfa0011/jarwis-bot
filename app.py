@@ -9,7 +9,7 @@ from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQu
 
 TOKEN = os.environ.get("BOT_TOKEN", "")
 if not TOKEN:
-    raise ValueError("BOT_TOKEN environment variable tanımlanmamış!")
+    raise ValueError("BOT_TOKEN environment variable tanimlanmamis!")
 
 class HealthCheck(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -24,18 +24,17 @@ def run_port():
         server = HTTPServer(('0.0.0.0', 7860), HealthCheck)
         server.serve_forever()
     except Exception as e:
-        print(f"HTTP server hatası: {e}")
+        print(f"HTTP server hatasi: {e}")
 
 async def start(u: Update, c: ContextTypes.DEFAULT_TYPE):
     await u.message.reply_text(
-        "🤖 *Jarwis Çevrimiçi.*\nEfendim, emrinizdeyim.\n\n🎵 Müzik aramak için şarkı adı yazın!",
-        parse_mode="Markdown"
+        "Jarwis Cevrimici.\nEfendim, emrinizdeyim.\n\nMuzik aramak icin sarki adi yazin!",
     )
 
 async def handle_msg(u: Update, c: ContextTypes.DEFAULT_TYPE):
     q = u.message.text
     sq = f"scsearch5:{q}"
-    s = await u.message.reply_text("🖥️ *Aranıyor...*", parse_mode="Markdown")
+    s = await u.message.reply_text("Araniyor...")
     try:
         loop = asyncio.get_event_loop()
         ydl_opts = {
@@ -46,10 +45,8 @@ async def handle_msg(u: Update, c: ContextTypes.DEFAULT_TYPE):
         }
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = await loop.run_in_executor(None, lambda: ydl.extract_info(sq, download=False))
-
         res = info.get('entries', [info])
         await s.delete()
-
         for e in res[:5]:
             if not e:
                 continue
@@ -58,14 +55,13 @@ async def handle_msg(u: Update, c: ContextTypes.DEFAULT_TYPE):
             duration = int(e.get('duration', 0) or 0)
             dur_str = f"{duration//60}:{duration%60:02d}" if duration else "?"
             uploader = e.get('uploader', '')
-            kb = [[InlineKeyboardButton("📥 İndir (MP3)", callback_data=url)]]
+            kb = [[InlineKeyboardButton("Indir (MP3)", callback_data=url)]]
             await u.message.reply_text(
-                f"🎧 *{title}*\n👤 {uploader}\n⏱ {dur_str}",
+                f"{title}\n{uploader}\n{dur_str}",
                 reply_markup=InlineKeyboardMarkup(kb),
-                parse_mode="Markdown"
             )
     except Exception as e:
-        await s.edit_text(f"❌ Hata: {str(e)}")
+        await s.edit_text(f"Hata: {str(e)}")
 
 async def get_url(u: Update, c: ContextTypes.DEFAULT_TYPE):
     text = u.message.text.replace("/url", "").strip()
@@ -100,8 +96,8 @@ async def get_url(u: Update, c: ContextTypes.DEFAULT_TYPE):
 async def btn(u: Update, c: ContextTypes.DEFAULT_TYPE):
     q = u.callback_query
     url = q.data
-    await q.answer("İndiriliyor, lütfen bekleyin...")
-    m = await q.message.reply_text("📥 *İndiriliyor...*", parse_mode="Markdown")
+    await q.answer("Indiriliyor, lutfen bekleyin...")
+    m = await q.message.reply_text("Indiriliyor...")
     fname = f"/tmp/{int(time.time())}"
     try:
         opts_dl = {
@@ -117,36 +113,31 @@ async def btn(u: Update, c: ContextTypes.DEFAULT_TYPE):
         loop = asyncio.get_event_loop()
         with yt_dlp.YoutubeDL(opts_dl) as ydl:
             await loop.run_in_executor(None, lambda: ydl.download([url]))
-
         actual_file = None
         for ext in ['.mp3', '.m4a', '.webm', '.opus']:
             if os.path.exists(fname + ext):
                 actual_file = fname + ext
                 break
-
         if actual_file:
             with open(actual_file, 'rb') as f:
                 await c.bot.send_audio(chat_id=q.message.chat_id, audio=f)
             os.remove(actual_file)
             await m.delete()
         else:
-            await m.edit_text("❌ Dosya oluşturulamadı.")
-
+            await m.edit_text("Dosya olusturulamadi.")
     except Exception as e:
-        print(f"İndirme hatası: {e}")
-        await m.edit_text(f"❌ İndirme başarısız: {str(e)[:100]}")
+        print(f"Indirme hatasi: {e}")
+        await m.edit_text(f"Indirme basarisiz: {str(e)[:100]}")
 
 def main():
     threading.Thread(target=run_port, daemon=True).start()
-    print("✅ Health check server başlatıldı")
-
+    print("Health check server baslatildi")
     app = Application.builder().token(TOKEN).build()
-app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("url", get_url))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_msg))
     app.add_handler(CallbackQueryHandler(btn))
-
-    print("🤖 Jarwis başlatılıyor...")
+    print("Jarwis baslatiliyor...")
     try:
         app.run_polling(
             drop_pending_updates=True,
@@ -154,7 +145,7 @@ app.add_handler(CommandHandler("start", start))
             poll_interval=1.0,
         )
     except Exception as e:
-        print(f"❌ KRİTİK HATA: {e}")
+        print(f"KRITIK HATA: {e}")
         raise
 
 if __name__ == '__main__':
