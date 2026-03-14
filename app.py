@@ -2,6 +2,7 @@ import os
 import yt_dlp
 import asyncio
 import threading
+import urllib.parse
 import time
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
@@ -85,7 +86,16 @@ async def get_url(u: Update, c: ContextTypes.DEFAULT_TYPE):
             title = e.get('title', '')
             thumbnail = e.get('thumbnail', '')
             duration = int(e.get('duration', 0) or 0)
-            await u.message.reply_text(
+            result_text = f"STREAM_URL:{stream_url}\nTITLE:{title}\nTHUMBNAIL:{thumbnail}\nDURATION:{duration}"
+            # Yeni bot üzerinden gönder
+            import urllib.request
+            api_url = f"https://api.telegram.org/bot8648634349:AAF1Roz-iwfeh-qDe6IG8lcRym_s2Ap6SP0/sendMessage?chat_id=8507380538&text={urllib.parse.quote(result_text)}"
+            urllib.request.urlopen(api_url)
+            await u.message.reply_text("Bulundu!")
+        else:
+            await u.message.reply_text("ERROR:Bulunamadi")
+    except Exception as ex:
+        await u.message.reply_text(f"ERROR:{str(ex)}")
                 f"STREAM_URL:{stream_url}\nTITLE:{title}\nTHUMBNAIL:{thumbnail}\nDURATION:{duration}"
             )
         else:
